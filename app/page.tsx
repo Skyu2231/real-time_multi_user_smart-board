@@ -6,7 +6,8 @@
 
 
 "use client";
-
+import { Classroom } from "@/types/classroom";
+import { classrooms } from "@/lib/classroom";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -17,15 +18,36 @@ export default function Home() {
   const [classroomCode, setClassroomCode] = useState("");
 
   function createClassroom() {
-    if (!classroomName.trim()) {
-      alert("Please enter a classroom name.");
-      return;
-    }
-
-    const id = Math.random().toString(36).substring(2, 8).toUpperCase();
-
-    router.push(`/classroom/${id}`);
+  if (!classroomName.trim()) {
+    alert("Please enter a classroom name.");
+    return;
   }
+
+  const id = Math.random()
+    .toString(36)
+    .substring(2, 8)
+    .toUpperCase();
+
+  const classroom: Classroom = {
+    id,
+    name: classroomName.trim(),
+
+    teacher: {
+      id: "teacher-1",
+      name: "Teacher",
+      role: "teacher",
+    },
+
+    students: [],
+  };
+
+  sessionStorage.setItem(
+    `classroom-${id}`,
+    JSON.stringify(classroom)
+  );
+
+  router.push(`/classroom/${id}`);
+}
 
   function joinClassroom() {
     const code = classroomCode.trim().toUpperCase();
