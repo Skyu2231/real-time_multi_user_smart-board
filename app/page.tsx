@@ -16,6 +16,7 @@ export default function Home() {
 
   const [classroomName, setClassroomName] = useState("");
   const [classroomCode, setClassroomCode] = useState("");
+  const [studentName, setStudentName] = useState("");
 
   function createClassroom() {
   if (!classroomName.trim()) {
@@ -41,7 +42,7 @@ export default function Home() {
     students: [],
   };
 
-  sessionStorage.setItem(
+  localStorage.setItem(
     `classroom-${id}`,
     JSON.stringify(classroom)
   );
@@ -50,15 +51,32 @@ export default function Home() {
 }
 
   function joinClassroom() {
-    const code = classroomCode.trim().toUpperCase();
+  const name = studentName.trim();
+  const code = classroomCode.trim().toUpperCase();
 
-    if (!code) {
-      alert("Please enter a classroom code.");
-      return;
-    }
-
-    router.push(`/classroom/${code}`);
+  if (!name) {
+    alert("Please enter your name.");
+    return;
   }
+
+  if (!code) {
+    alert("Please enter a classroom code.");
+    return;
+  }
+
+  const student = {
+    id: `student-${Date.now()}`,
+    name,
+    role: "student" as const,
+  };
+
+  localStorage.setItem(
+    `student-${code}`,
+    JSON.stringify(student)
+  );
+
+  router.push(`/classroom/${code}`);
+}
 
   return (
     <main
@@ -104,6 +122,13 @@ export default function Home() {
 
           <input
             type="text"
+            placeholder="Your name"
+            value={studentName}
+            onChange={(event) => setStudentName(event.target.value)}
+          />
+
+          <input
+            type="text"
             placeholder="Enter classroom code"
             value={classroomCode}
             onChange={(event) => setClassroomCode(event.target.value)}
@@ -112,7 +137,7 @@ export default function Home() {
           <button onClick={joinClassroom}>
             Join Classroom
           </button>
-        </section>
+</section>
       </div>
     </main>
   );

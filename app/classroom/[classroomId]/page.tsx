@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 
-import { Classroom } from "@/types/classroom";
+import { Classroom, User } from "@/types/classroom";
 
 export default function ClassroomPage() {
   const params = useParams();
@@ -13,13 +13,39 @@ export default function ClassroomPage() {
   useEffect(() => {
     const classroomId = params.classroomId as string;
 
-    const storedClassroom = sessionStorage.getItem(
+    const storedClassroom = localStorage.getItem(
       `classroom-${classroomId}`
     );
 
-    if (storedClassroom) {
-      setClassroom(JSON.parse(storedClassroom));
+    const storedStudent = localStorage.getItem(
+      `student-${classroomId}`
+    );
+
+    if (!storedClassroom) {
+      return;
     }
+
+    const classroomData: Classroom =
+      JSON.parse(storedClassroom);
+
+    if (storedStudent) {
+      const student: User = JSON.parse(storedStudent);
+
+      const alreadyJoined = classroomData.students.some(
+        (existingStudent) => existingStudent.id === student.id
+      );
+
+      if (!alreadyJoined) {
+        classroomData.students.push(student);
+
+        localStorage.setItem(
+          `classroom-${classroomId}`,
+          JSON.stringify(classroomData)
+        );
+      }
+    }
+
+    setClassroom(classroomData);
   }, [params.classroomId]);
 
   if (!classroom) {
@@ -52,7 +78,7 @@ export default function ClassroomPage() {
         <ul>
           {classroom.students.map((student) => (
             <li key={student.id}>
-              {student.name}
+              {student.name} ({student.role})
             </li>
           ))}
         </ul>
