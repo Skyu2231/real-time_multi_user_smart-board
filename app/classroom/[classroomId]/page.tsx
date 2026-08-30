@@ -1,9 +1,25 @@
 "use client";
 
+import dynamic from "next/dynamic";
+import "@excalidraw/excalidraw/index.css";
+
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 
 import { Classroom, User } from "@/types/classroom";
+
+const Excalidraw = dynamic(
+  async () => {
+    const module = await import("@excalidraw/excalidraw");
+
+    return {
+      default: module.Excalidraw,
+    };
+  },
+  {
+    ssr: false,
+  }
+);
 
 export default function ClassroomPage() {
   const params = useParams();
@@ -88,13 +104,30 @@ setClassroom(updatedClassroom);
   }
 
   return (
-    <main style={{ padding: "40px" }}>
-      <h1>{classroom.name}</h1>
+  <main
+    style={{
+      minHeight: "100vh",
+      padding: "20px",
+    }}
+  >
+    <h1>{classroom.name}</h1>
 
-      <p>
-        Classroom Code: <strong>{classroom.id}</strong>
-      </p>
+    <p>
+      Classroom Code: <strong>{classroom.id}</strong>
+    </p>
 
+    <div
+      style={{
+        width: "100%",
+        height: "600px",
+        marginTop: "20px",
+        border: "1px solid #ddd",
+      }}
+    >
+      <Excalidraw />
+    </div>
+
+    <section style={{ marginTop: "30px" }}>
       <h2>Teacher</h2>
 
       <p>
@@ -103,30 +136,29 @@ setClassroom(updatedClassroom);
 
       <h2>Students</h2>
 
-        {classroom.students.length === 0 ? (
+      {classroom.students.length === 0 ? (
         <p>No students have joined yet.</p>
-        ) : (
+      ) : (
         <ul>
-            {classroom.students.map((student) => (
+          {classroom.students.map((student) => (
             <li key={student.id}>
-                {student.name} ({student.role}) - Permission:{" "}
-                {student.permission}
+              {student.name} ({student.role}) - Permission:{" "}
+              {student.permission}{" "}
 
-                {" "}
-
-                <button
+              <button
                 onClick={() =>
-                    toggleDrawingPermission(student.id)
+                  toggleDrawingPermission(student.id)
                 }
-                >
+              >
                 {student.permission === "draw"
-                    ? "Revoke Drawing"
-                    : "Allow Drawing"}
-                </button>
+                  ? "[Revoke Drawing]"
+                  : "[Allow Drawing]"}
+              </button>
             </li>
-            ))}
+          ))}
         </ul>
-        )}
-    </main>
-  );
+      )}
+    </section>
+  </main>
+);
 }
