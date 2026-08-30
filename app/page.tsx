@@ -46,6 +46,7 @@ export default function Home() {
     `classroom-${id}`,
     JSON.stringify(classroom)
   );
+  sessionStorage.setItem("currentUserId", "teacher-1");
 
   router.push(`/classroom/${id}`);
 }
@@ -74,6 +75,7 @@ export default function Home() {
     `student-${code}`,
     JSON.stringify(student)
   );
+  sessionStorage.setItem("currentUserId", student.id);
 
   router.push(`/classroom/${code}`);
 }

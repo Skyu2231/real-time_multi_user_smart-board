@@ -25,6 +25,7 @@ export default function ClassroomPage() {
   const params = useParams();
 
   const [classroom, setClassroom] = useState<Classroom | null>(null);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
   function toggleDrawingPermission(studentId: string) {
   if (!classroom) {
     return;
@@ -93,6 +94,26 @@ setClassroom(updatedClassroom);
     }
 
     setClassroom(classroomData);
+
+    const currentUserId =
+    sessionStorage.getItem("currentUserId");
+
+    if (!currentUserId) {
+    return;
+    }
+
+    if (classroomData.teacher.id === currentUserId) {
+    setCurrentUser(classroomData.teacher);
+    return;
+    }
+
+    const student = classroomData.students.find(
+    (student) => student.id === currentUserId
+    );
+
+    if (student) {
+    setCurrentUser(student);
+    }
   }, [params.classroomId]);
 
   if (!classroom) {
@@ -103,7 +124,7 @@ setClassroom(updatedClassroom);
     );
   }
 
-  return (
+return (
   <main
     style={{
       minHeight: "100vh",
@@ -111,6 +132,12 @@ setClassroom(updatedClassroom);
     }}
   >
     <h1>{classroom.name}</h1>
+
+    {currentUser && (
+      <p>
+        You are: {currentUser.name} ({currentUser.role})
+      </p>
+    )}
 
     <p>
       Classroom Code: <strong>{classroom.id}</strong>
@@ -134,29 +161,33 @@ setClassroom(updatedClassroom);
         {classroom.teacher.name} ({classroom.teacher.role})
       </p>
 
-      <h2>Students</h2>
+      {currentUser?.role === "teacher" && (
+        <>
+          <h2>Students</h2>
 
-      {classroom.students.length === 0 ? (
-        <p>No students have joined yet.</p>
-      ) : (
-        <ul>
-          {classroom.students.map((student) => (
-            <li key={student.id}>
-              {student.name} ({student.role}) - Permission:{" "}
-              {student.permission}{" "}
+          {classroom.students.length === 0 ? (
+            <p>No students have joined yet.</p>
+          ) : (
+            <ul>
+              {classroom.students.map((student) => (
+                <li key={student.id}>
+                  {student.name} ({student.role}) - Permission:{" "}
+                  {student.permission}{" "}
 
-              <button
-                onClick={() =>
-                  toggleDrawingPermission(student.id)
-                }
-              >
-                {student.permission === "draw"
-                  ? "[Revoke Drawing]"
-                  : "[Allow Drawing]"}
-              </button>
-            </li>
-          ))}
-        </ul>
+                  <button
+                    onClick={() =>
+                      toggleDrawingPermission(student.id)
+                    }
+                  >
+                    {student.permission === "draw"
+                      ? "Revoke Drawing"
+                      : "Allow Drawing"}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </>
       )}
     </section>
   </main>
