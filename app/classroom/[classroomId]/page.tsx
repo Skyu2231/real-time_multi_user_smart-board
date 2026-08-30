@@ -9,6 +9,37 @@ export default function ClassroomPage() {
   const params = useParams();
 
   const [classroom, setClassroom] = useState<Classroom | null>(null);
+  function toggleDrawingPermission(studentId: string) {
+  if (!classroom) {
+    return;
+  }
+
+//   const updatedStudents = classroom.students.map((student) => {
+    const updatedStudents: User[] = classroom.students.map((student) => {
+    if (student.id !== studentId) {
+      return student;
+    }
+
+    return {
+      ...student,
+      permission:
+        student.permission === "draw" ? "none" : "draw",
+    };
+  });
+
+    const updatedClassroom: Classroom = {
+    ...classroom,
+    students: updatedStudents,
+    };
+
+setClassroom(updatedClassroom);
+  setClassroom(updatedClassroom);
+
+  localStorage.setItem(
+    `classroom-${classroom.id}`,
+    JSON.stringify(updatedClassroom)
+  );
+}
 
   useEffect(() => {
     const classroomId = params.classroomId as string;
@@ -72,17 +103,30 @@ export default function ClassroomPage() {
 
       <h2>Students</h2>
 
-      {classroom.students.length === 0 ? (
+        {classroom.students.length === 0 ? (
         <p>No students have joined yet.</p>
-      ) : (
+        ) : (
         <ul>
-          {classroom.students.map((student) => (
+            {classroom.students.map((student) => (
             <li key={student.id}>
-              {student.name} ({student.role})
+                {student.name} ({student.role}) - Permission:{" "}
+                {student.permission}
+
+                {" "}
+
+                <button
+                onClick={() =>
+                    toggleDrawingPermission(student.id)
+                }
+                >
+                {student.permission === "draw"
+                    ? "Revoke Drawing"
+                    : "Allow Drawing"}
+                </button>
             </li>
-          ))}
+            ))}
         </ul>
-      )}
+        )}
     </main>
   );
 }

@@ -7,7 +7,6 @@
 
 "use client";
 import { Classroom } from "@/types/classroom";
-import { classrooms } from "@/lib/classroom";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -37,6 +36,7 @@ export default function Home() {
       id: "teacher-1",
       name: "Teacher",
       role: "teacher",
+      permission: "draw_and_type",
     },
 
     students: [],
@@ -64,12 +64,12 @@ export default function Home() {
     return;
   }
 
-  const student = {
+    const student = {
     id: `student-${Date.now()}`,
     name,
     role: "student" as const,
+    permission: "none" as const,
   };
-
   localStorage.setItem(
     `student-${code}`,
     JSON.stringify(student)
