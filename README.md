@@ -533,13 +533,13 @@ Make sure `.env.local` is included in `.gitignore`.
 ## 1. Clone the repository
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/Skyu2231/real-time_multi_user_smart-board.git
 ```
 
 ## 2. Open the project
 
 ```bash
-cd multi-user-smart-board
+cd smartboard
 ```
 
 ## 3. Install dependencies
@@ -584,7 +584,11 @@ The application should be available at:
 ```text
 http://localhost:3000
 ```
-
+But,
+```text
+http://localhost:3000/login  
+```
+[AS OF NOW FOR LOGIN PURPOSE]
 ---
 
 # Testing
