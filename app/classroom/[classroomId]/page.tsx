@@ -10,6 +10,7 @@ import { useRouter } from "next/navigation";
 import { Classroom, User } from "@/types/classroom";
 import type { ExcalidrawImperativeAPI,} from "@excalidraw/excalidraw/types";
 import { supabase } from "@/lib/supabase";
+import { CaptureUpdateAction } from "@excalidraw/excalidraw";
 
 
 const Excalidraw = dynamic(
@@ -50,6 +51,12 @@ export default function ClassroomPage() {
   );
 
   const pendingElements = useRef<any>([]);
+
+  const outgoingSequence = useRef(0);
+
+  const lastReceivedSequence = useRef(
+    new Map<string, number>()
+  );
 
   async function toggleDrawingPermission(studentId: string) {
   if (!classroom || currentUser?.role !== "teacher") {
@@ -363,7 +370,6 @@ export default function ClassroomPage() {
 }, [params.classroomId]);
 
 
-
     useEffect(() => {
   const classroomId = params.classroomId as string;
 
@@ -401,10 +407,72 @@ export default function ClassroomPage() {
           return;
         }
 
+        const incomingSequence =
+          typeof data.sequence === "number"
+            ? data.sequence
+            : 0;
+
+        const previousSequence =
+          lastReceivedSequence.current.get(
+            data.clientId
+          ) ?? -1;
+
+        // Ignore an older update.
+        if (incomingSequence <= previousSequence) {
+          return;
+        }
+
+        lastReceivedSequence.current.set(
+          data.clientId,
+          incomingSequence
+        );
+
+        const currentElements =
+          excalidrawAPI.current
+            .getSceneElementsIncludingDeleted();
+
+        const currentById = new Map(
+          currentElements.map((element: any) => [
+            element.id,
+            element,
+          ])
+        );
+
+        for (const incomingElement of data.elements) {
+          const localElement =
+            currentById.get(incomingElement.id);
+
+          if (!localElement) {
+            currentById.set(
+              incomingElement.id,
+              incomingElement
+            );
+            continue;
+          }
+
+          const incomingVersion =
+            incomingElement.version ?? 0;
+
+          const localVersion =
+            localElement.version ?? 0;
+
+          if (incomingVersion >= localVersion) {
+            currentById.set(
+              incomingElement.id,
+              incomingElement
+            );
+          }
+        }
+
+        const mergedElements = Array.from(
+          currentById.values()
+        );
+
         isApplyingRemoteChange.current = true;
 
         excalidrawAPI.current.updateScene({
-          elements: data.elements,
+          elements: mergedElements,
+          captureUpdate: CaptureUpdateAction.NEVER,
         });
 
         requestAnimationFrame(() => {
@@ -426,10 +494,11 @@ export default function ClassroomPage() {
     }
 
     whiteboardChannel.current = null;
+
     supabase.removeChannel(channel);
   };
-
 }, [params.classroomId]);
+  
 
   if (!classroom) {
     return (
@@ -545,6 +614,7 @@ return (
           currentUser?.role === "student" &&
           currentUser.permission !== "draw"
         }
+        
         onChange={(elements) => {
           if (isApplyingRemoteChange.current) {
             return;
@@ -556,24 +626,26 @@ return (
             return;
           }
 
-          // Store the latest version of the drawing.
+          // Always keep the newest local scene.
           pendingElements.current = elements;
 
-          // If a broadcast is already scheduled,
-          // don't create another one.
+          // Don't schedule multiple broadcasts.
           if (broadcastTimeout.current) {
             return;
           }
 
-          // Wait a short moment before sending.
           broadcastTimeout.current = setTimeout(() => {
-            const latestElements = pendingElements.current;
+            const latestElements =
+              pendingElements.current;
+
+            outgoingSequence.current += 1;
 
             channel.send({
               type: "broadcast",
               event: "whiteboard-update",
               payload: {
                 clientId: clientId.current,
+                sequence: outgoingSequence.current,
                 elements: latestElements,
               },
             });
