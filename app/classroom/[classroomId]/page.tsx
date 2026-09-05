@@ -48,8 +48,6 @@ export default function ClassroomPage() {
     ...classroom,
     students: updatedStudents,
     };
-
-setClassroom(updatedClassroom);
   setClassroom(updatedClassroom);
 
   localStorage.setItem(
@@ -134,10 +132,40 @@ return (
     <h1>{classroom.name}</h1>
 
     {currentUser && (
+      <div
+        style={{
+          marginTop: "10px",
+          marginBottom: "20px",
+          padding: "10px",
+          border: "1px solid #ddd",
+          borderRadius: "8px",
+        }}
+      >
+        <p>
+          You are: <strong>{currentUser.name}</strong> (
+          {currentUser.role})
+        </p>
+
+        {currentUser.role === "teacher" ? (
+          <p>
+            Whiteboard: <strong>Editable</strong>
+          </p>
+        ) : (
+          <p>
+            Permission: <strong>{currentUser.permission}</strong>
+          </p>
+        )}
+      </div>
+    )}
+
+    {currentUser?.role === "student" && (
       <p>
-        You are: {currentUser.name} ({currentUser.role})
+        {currentUser.permission === "draw"
+          ? "You can draw on the whiteboard."
+          : "You are currently in view-only mode."}
       </p>
     )}
+
 
     <p>
       Classroom Code: <strong>{classroom.id}</strong>
@@ -151,7 +179,12 @@ return (
         border: "1px solid #ddd",
       }}
     >
-      <Excalidraw />
+      <Excalidraw
+        viewModeEnabled={
+          currentUser?.role === "student" &&
+          currentUser.permission !== "draw"
+        }
+      />
     </div>
 
     <section style={{ marginTop: "30px" }}>
