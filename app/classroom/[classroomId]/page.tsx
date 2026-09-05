@@ -3,11 +3,12 @@
 import dynamic from "next/dynamic";
 import "@excalidraw/excalidraw/index.css";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import { useRouter } from "next/navigation";
 
 import { Classroom, User } from "@/types/classroom";
+import type { ExcalidrawImperativeAPI, } from "@excalidraw/excalidraw/types";
 import { supabase } from "@/lib/supabase";
 
 
@@ -30,6 +31,19 @@ export default function ClassroomPage() {
   const router= useRouter();
   const [classroom, setClassroom] = useState<Classroom | null>(null);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+
+  const excalidrawAPI =
+  useRef<ExcalidrawImperativeAPI | null>(null);
+
+  const whiteboardChannel =
+    useRef<ReturnType<typeof supabase.channel> | null>(null);
+
+  const isApplyingRemoteChange =
+    useRef(false);
+
+  const clientId = useRef(
+    Math.random().toString(36).substring(2, 10)
+  );
 
   async function toggleDrawingPermission(studentId: string) {
   if (!classroom || currentUser?.role !== "teacher") {
@@ -342,6 +356,69 @@ export default function ClassroomPage() {
   };
 }, [params.classroomId]);
 
+
+
+    useEffect(() => {
+  const classroomId = params.classroomId as string;
+
+  const channel = supabase.channel(
+    `whiteboard-${classroomId}`
+  );
+
+  whiteboardChannel.current = channel;
+
+  channel
+    .on(
+      "broadcast",
+      { event: "whiteboard-update" },
+      (payload) => {
+        console.log(
+          "Received whiteboard update:",
+          payload
+        );
+
+        const data = payload.payload;
+
+        if (!data) {
+          return;
+        }
+
+        if (data.clientId === clientId.current) {
+          return;
+        }
+
+        if (!data.elements) {
+          return;
+        }
+
+        if (!excalidrawAPI.current) {
+          return;
+        }
+
+        isApplyingRemoteChange.current = true;
+
+        excalidrawAPI.current.updateScene({
+          elements: data.elements,
+        });
+
+        requestAnimationFrame(() => {
+          isApplyingRemoteChange.current = false;
+        });
+      }
+    )
+    .subscribe((status) => {
+      console.log(
+        "Whiteboard realtime status:",
+        status
+      );
+    });
+
+  return () => {
+    whiteboardChannel.current = null;
+    supabase.removeChannel(channel);
+  };
+}, [params.classroomId]);
+
   if (!classroom) {
     return (
       <main style={{ padding: "40px" }}>
@@ -446,12 +523,38 @@ return (
         border: "1px solid #ddd",
       }}
     >
+
+
       <Excalidraw
+        excalidrawAPI={(api) => {
+          excalidrawAPI.current = api;
+        }}
         viewModeEnabled={
           currentUser?.role === "student" &&
           currentUser.permission !== "draw"
         }
+        onChange={(elements) => {
+          if (isApplyingRemoteChange.current) {
+            return;
+          }
+
+          const channel = whiteboardChannel.current;
+
+          if (!channel) {
+            return;
+          }
+
+          channel.send({
+            type: "broadcast",
+            event: "whiteboard-update",
+            payload: {
+              clientId: clientId.current,
+              elements,
+            },
+          });
+        }}
       />
+
     </div>
 
     <section style={{ marginTop: "30px" }}>
