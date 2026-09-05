@@ -120,7 +120,7 @@ export default function ClassroomPage() {
   if (!classroom) {
     return (
       <main style={{ padding: "40px" }}>
-        <h1>Classroom not found</h1>
+        <h1>Loading classroom...</h1>
       </main>
     );
   }
@@ -133,7 +133,11 @@ return (
     }}
   >
     <button
-      onClick={() => router.push("/")}
+      onClick={() =>{
+        sessionStorage.removeItem("currentUserId");
+        router.replace("/");
+      }
+    }
       style={{
         marginBottom: "20px",
         padding: "8px 14px",

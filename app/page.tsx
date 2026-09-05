@@ -72,6 +72,7 @@ export default function Home() {
 
   if (!storedClassroom) {
     alert("Classroom not found. Please check the code.");
+    router.push("/");
     return;
   }
 
