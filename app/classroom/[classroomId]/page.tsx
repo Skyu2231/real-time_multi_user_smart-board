@@ -30,34 +30,67 @@ export default function ClassroomPage() {
   const router= useRouter();
   const [classroom, setClassroom] = useState<Classroom | null>(null);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  function toggleDrawingPermission(studentId: string) {
+
+  async function toggleDrawingPermission(studentId: string) {
   if (!classroom || currentUser?.role !== "teacher") {
     return;
   }
 
-//   const updatedStudents = classroom.students.map((student) => {
-    const updatedStudents: User[] = classroom.students.map((student) => {
-    if (student.id !== studentId) {
-      return student;
-    }
+  const student = classroom.students.find(
+    (student) => student.id === studentId
+  );
 
-    return {
-      ...student,
-      permission:
-        student.permission === "draw" ? "none" : "draw",
-    };
-  });
+  if (!student) {
+    return;
+  }
 
-    const updatedClassroom: Classroom = {
+  const newPermission =
+    student.permission === "draw" ? "none" : "draw";
+
+  const { error } = await supabase
+    .from("classroom_members")
+    .update({
+      permission: newPermission,
+    })
+    .eq("classroom_id", classroom.id)
+    .eq("user_id", studentId);
+
+  if (error) {
+    console.error(
+      "Failed to update drawing permission:",
+      error
+    );
+
+    alert(
+      `Failed to update permission: ${error.message}`
+    );
+
+    return;
+  }
+
+  const updatedStudents: User[] =
+    classroom.students.map((student) => {
+      if (student.id !== studentId) {
+        return student;
+      }
+
+      return {
+        ...student,
+        permission: newPermission,
+      };
+    });
+
+  setClassroom({
     ...classroom,
     students: updatedStudents,
-    };
-  setClassroom(updatedClassroom);
+  });
 
-  localStorage.setItem(
-    `classroom-${classroom.id}`,
-    JSON.stringify(updatedClassroom)
-  );
+  if (currentUser?.id === studentId) {
+    setCurrentUser({
+      ...currentUser,
+      permission: newPermission,
+    });
+  }
 }
 
   useEffect(() => {
@@ -198,11 +231,89 @@ export default function ClassroomPage() {
     if (currentStudent) {
       setCurrentUser(currentStudent);
     }
-    
+
   }
 
   loadClassroom();
 }, [params.classroomId, router]);
+
+  useEffect(() => {
+  const classroomId = params.classroomId as string;
+
+  const channel = supabase
+    .channel(`classroom-members-${classroomId}`)
+    .on(
+      "postgres_changes",
+      {
+        event: "UPDATE",
+        schema: "public",
+        table: "classroom_members",
+        filter: `classroom_id=eq.${classroomId}`,
+      },
+      (payload) => {
+        console.log(
+          "Realtime permission update:",
+          payload
+        );
+
+        const updatedMember =
+          payload.new as {
+            user_id: string;
+            permission: "none" | "draw";
+          };
+
+        setClassroom((currentClassroom) => {
+          if (!currentClassroom) {
+            return currentClassroom;
+          }
+
+          const updatedStudents =
+            currentClassroom.students.map((student) => {
+              if (
+                student.id !== updatedMember.user_id
+              ) {
+                return student;
+              }
+
+              return {
+                ...student,
+                permission:
+                  updatedMember.permission === "draw"
+                    ? ("draw" as const)
+                    : ("none" as const),
+              };
+            });
+
+          return {
+            ...currentClassroom,
+            students: updatedStudents,
+          };
+        });
+
+        setCurrentUser((currentUser) => {
+          if (
+            !currentUser ||
+            currentUser.id !== updatedMember.user_id
+          ) {
+            return currentUser;
+          }
+
+          return {
+            ...currentUser,
+            permission:
+              updatedMember.permission === "draw"
+                ? ("draw" as const)
+                : ("none" as const),
+          };
+        });
+      }
+    )
+    .subscribe();
+
+  return () => {
+    supabase.removeChannel(channel);
+  };
+}, [params.classroomId]);
 
   if (!classroom) {
     return (
