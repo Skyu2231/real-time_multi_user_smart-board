@@ -245,44 +245,72 @@ export default function ClassroomPage() {
     .on(
       "postgres_changes",
       {
-        event: "UPDATE",
+        event: "*",
         schema: "public",
         table: "classroom_members",
         filter: `classroom_id=eq.${classroomId}`,
       },
-      (payload) => {
-        console.log(
-          "Realtime permission update:",
-          payload
-        );
+      async (payload) => {
+        console.log("Realtime classroom member change:", payload);
 
-        const updatedMember =
-          payload.new as {
-            user_id: string;
-            permission: "none" | "draw";
-          };
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+
+        if (!user) {
+          return;
+        }
+
+        const { data: memberData, error } = await supabase
+          .from("classroom_members")
+          .select(`
+            user_id,
+            permission,
+            profiles (
+              id,
+              name,
+              role
+            )
+          `)
+          .eq("classroom_id", classroomId);
+
+        if (error) {
+          console.error(
+            "Failed to reload classroom members:",
+            error
+          );
+
+          return;
+        }
+
+        const updatedStudents: User[] = (memberData ?? [])
+          .filter((member) => {
+            const profile = Array.isArray(member.profiles)
+              ? member.profiles[0]
+              : member.profiles;
+
+            return profile?.role === "student";
+          })
+          .map((member) => {
+            const profile = Array.isArray(member.profiles)
+              ? member.profiles[0]
+              : member.profiles;
+
+            return {
+              id: member.user_id,
+              name: profile?.name ?? "Student",
+              role: "student" as const,
+              permission:
+                member.permission === "draw"
+                  ? ("draw" as const)
+                  : ("none" as const),
+            };
+          });
 
         setClassroom((currentClassroom) => {
           if (!currentClassroom) {
             return currentClassroom;
           }
-
-          const updatedStudents =
-            currentClassroom.students.map((student) => {
-              if (
-                student.id !== updatedMember.user_id
-              ) {
-                return student;
-              }
-
-              return {
-                ...student,
-                permission:
-                  updatedMember.permission === "draw"
-                    ? ("draw" as const)
-                    : ("none" as const),
-              };
-            });
 
           return {
             ...currentClassroom,
@@ -291,20 +319,19 @@ export default function ClassroomPage() {
         });
 
         setCurrentUser((currentUser) => {
-          if (
-            !currentUser ||
-            currentUser.id !== updatedMember.user_id
-          ) {
+          if (!currentUser) {
             return currentUser;
           }
 
-          return {
-            ...currentUser,
-            permission:
-              updatedMember.permission === "draw"
-                ? ("draw" as const)
-                : ("none" as const),
-          };
+          const updatedStudent = updatedStudents.find(
+            (student) => student.id === currentUser.id
+          );
+
+          if (!updatedStudent) {
+            return currentUser;
+          }
+
+          return updatedStudent;
         });
       }
     )
