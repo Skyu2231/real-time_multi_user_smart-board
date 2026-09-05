@@ -186,9 +186,28 @@ return (
     )}
 
 
-    <p>
-      Classroom Code: <strong>{classroom.id}</strong>
-    </p>
+    <div
+      style={{
+        marginTop: "10px",
+        marginBottom: "20px",
+        padding: "12px",
+        border: "1px solid #ddd",
+        borderRadius: "8px",
+      }}
+    >
+      <p style={{ margin: 0 }}>
+        Classroom Code:
+      </p>
+
+      <strong
+        style={{
+          fontSize: "24px",
+          letterSpacing: "3px",
+        }}
+      >
+        {classroom.id}
+      </strong>
+    </div>
 
     <div
       style={{
