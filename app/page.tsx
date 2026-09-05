@@ -9,6 +9,7 @@
 import { Classroom } from "@/types/classroom";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabase";
 
 export default function Home() {
   const router = useRouter();
@@ -17,7 +18,7 @@ export default function Home() {
   const [classroomCode, setClassroomCode] = useState("");
   const [studentName, setStudentName] = useState("");
 
-  function createClassroom() {
+  async function createClassroom() {
   if (!classroomName.trim()) {
     alert("Please enter a classroom name.");
     return;
@@ -28,29 +29,30 @@ export default function Home() {
     .substring(2, 8)
     .toUpperCase();
 
-  const classroom: Classroom = {
-    id,
-    name: classroomName.trim(),
+  const temporaryTeacherId = "de66748b-811a-4214-a0d5-6b8e14be6890";//teacher's auth id
 
-    teacher: {
-      id: "teacher-1",
-      name: "Teacher",
-      role: "teacher",
-      permission: "draw_and_type",
-    },
+  const { error } = await supabase
+    .from("classrooms")
+    .insert({
+      id,
+      name: classroomName.trim(),
+      teacher_id: temporaryTeacherId,
+    });
 
-    students: [],
-  };
+  if (error) {
+    console.error("Failed to create classroom:", error);
 
-  localStorage.setItem(
-    `classroom-${id}`,
-    JSON.stringify(classroom)
-  );
+    alert(
+      `Failed to create classroom: ${error.message}`
+    );
+
+    return;
+  }
+
   sessionStorage.setItem("currentUserId", "teacher-1");
 
   router.push(`/classroom/${id}`);
 }
-
   function joinClassroom() {
   const name = studentName.trim();
   const code = classroomCode.trim().toUpperCase();
