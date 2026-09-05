@@ -8,6 +8,7 @@ import { useParams } from "next/navigation";
 import { useRouter } from "next/navigation";
 
 import { Classroom, User } from "@/types/classroom";
+import { supabase } from "@/lib/supabase";
 
 
 const Excalidraw = dynamic(
@@ -60,62 +61,86 @@ export default function ClassroomPage() {
 }
 
   useEffect(() => {
+  async function loadClassroom() {
     const classroomId = params.classroomId as string;
 
-    const storedClassroom = localStorage.getItem(
-      `classroom-${classroomId}`
-    );
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
-    const storedStudent = localStorage.getItem(
-      `student-${classroomId}`
-    );
-
-    if (!storedClassroom) {
+    if (!user) {
+      alert("You must be logged in.");
+      router.push("/login");
       return;
     }
 
-    const classroomData: Classroom =
-      JSON.parse(storedClassroom);
+    const { data: classroomData, error: classroomError } =
+      await supabase
+        .from("classrooms")
+        .select("id, name, teacher_id")
+        .eq("id", classroomId)
+        .single();
 
-    if (storedStudent) {
-      const student: User = JSON.parse(storedStudent);
-
-      const alreadyJoined = classroomData.students.some(
-        (existingStudent) => existingStudent.id === student.id
+    if (classroomError || !classroomData) {
+      console.error(
+        "Failed to load classroom:",
+        classroomError
       );
 
-      if (!alreadyJoined) {
-        classroomData.students.push(student);
+      alert(
+        `Failed to load classroom: ${
+          classroomError?.message ?? "Classroom not found"
+        }`
+      );
 
-        localStorage.setItem(
-          `classroom-${classroomId}`,
-          JSON.stringify(classroomData)
-        );
-      }
+      return;
     }
 
-    setClassroom(classroomData);
+    const { data: teacherData, error: teacherError } =
+      await supabase
+        .from("profiles")
+        .select("id, name, role")
+        .eq("id", classroomData.teacher_id)
+        .single();
 
-    const currentUserId =
-    sessionStorage.getItem("currentUserId");
+    if (teacherError || !teacherData) {
+      console.error(
+        "Failed to load teacher:",
+        teacherError
+      );
 
-    if (!currentUserId) {
-    return;
+      alert(
+        `Failed to load teacher: ${
+          teacherError?.message ?? "Teacher profile not found"
+        }`
+      );
+
+      return;
     }
 
-    if (classroomData.teacher.id === currentUserId) {
-    setCurrentUser(classroomData.teacher);
-    return;
-    }
+    const teacher: User = {
+      id: teacherData.id,
+      name: teacherData.name,
+      role: "teacher",
+      permission: "draw_and_type",
+    };
 
-    const student = classroomData.students.find(
-    (student) => student.id === currentUserId
-    );
+    const classroom: Classroom = {
+      id: classroomData.id,
+      name: classroomData.name,
+      teacher,
+      students: [],
+    };
 
-    if (student) {
-    setCurrentUser(student);
+    setClassroom(classroom);
+
+    if (user.id === classroomData.teacher_id) {
+      setCurrentUser(teacher);
     }
-  }, [params.classroomId]);
+  }
+
+  loadClassroom();
+}, [params.classroomId, router]);
 
   if (!classroom) {
     return (

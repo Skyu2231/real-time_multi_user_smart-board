@@ -24,19 +24,27 @@ export default function Home() {
     return;
   }
 
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    alert("You must be logged in to create a classroom.");
+    router.push("/login");
+    return;
+  }
+
   const id = Math.random()
     .toString(36)
     .substring(2, 8)
     .toUpperCase();
-
-  const temporaryTeacherId = "de66748b-811a-4214-a0d5-6b8e14be6890";//teacher's auth id
 
   const { error } = await supabase
     .from("classrooms")
     .insert({
       id,
       name: classroomName.trim(),
-      teacher_id: temporaryTeacherId,
+      teacher_id: user.id,
     });
 
   if (error) {
@@ -49,7 +57,7 @@ export default function Home() {
     return;
   }
 
-  sessionStorage.setItem("currentUserId", "teacher-1");
+  sessionStorage.setItem("currentUserId", user.id);
 
   router.push(`/classroom/${id}`);
 }
