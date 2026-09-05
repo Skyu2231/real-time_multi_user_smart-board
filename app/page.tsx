@@ -65,6 +65,16 @@ export default function Home() {
     return;
   }
 
+
+  const storedClassroom = localStorage.getItem(
+    `classroom-${code}`
+  );
+
+  if (!storedClassroom) {
+    alert("Classroom not found. Please check the code.");
+    return;
+  }
+
     const student = {
     id: `student-${Date.now()}`,
     name,

@@ -30,7 +30,7 @@ export default function ClassroomPage() {
   const [classroom, setClassroom] = useState<Classroom | null>(null);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   function toggleDrawingPermission(studentId: string) {
-  if (!classroom) {
+  if (!classroom || currentUser?.role !== "teacher") {
     return;
   }
 
@@ -241,14 +241,33 @@ return (
           ) : (
             <ul>
               {classroom.students.map((student) => (
-                <li key={student.id}>
-                  {student.name} ({student.role}) - Permission:{" "}
-                  {student.permission}{" "}
+                <li key={student.id} style={{marginBottom: "12px"}}>
+                   <strong>{student.name}</strong>{" "}
+                    ({student.role})
+
+                      <br />
+
+                      Permission:{" "}
+                      <strong>
+                        {student.permission === "draw"
+                          ? "Can Draw"
+                          : "View Only"}
+                      </strong>
+
+                      <br />
 
                   <button
                     onClick={() =>
                       toggleDrawingPermission(student.id)
                     }
+                    style={{
+                      marginTop:"5px",
+                      padding:"6px 10px",
+                      cursor:"pointer",
+                      backgroundColor:"white",
+                      color:"blue",
+                      borderRadius:"5px",
+                    }}
                   >
                     {student.permission === "draw"
                       ? "Revoke Drawing"
