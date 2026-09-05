@@ -5,8 +5,10 @@ import "@excalidraw/excalidraw/index.css";
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 
 import { Classroom, User } from "@/types/classroom";
+
 
 const Excalidraw = dynamic(
   async () => {
@@ -23,7 +25,8 @@ const Excalidraw = dynamic(
 
 export default function ClassroomPage() {
   const params = useParams();
-
+  
+  const router= useRouter();
   const [classroom, setClassroom] = useState<Classroom | null>(null);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   function toggleDrawingPermission(studentId: string) {
@@ -129,6 +132,18 @@ return (
       padding: "20px",
     }}
   >
+    <button
+      onClick={() => router.push("/")}
+      style={{
+        marginBottom: "20px",
+        padding: "8px 14px",
+        cursor: "pointer",
+      }}
+    >
+      Leave Classroom
+    </button>
+
+
     <h1>{classroom.name}</h1>
 
     {currentUser && (
