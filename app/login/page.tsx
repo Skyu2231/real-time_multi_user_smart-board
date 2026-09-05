@@ -43,7 +43,7 @@ export default function LoginPage() {
             color: "#111",
         }}
     >
-      <h1>Teacher Login</h1>
+      <h1>Login</h1>
 
       <div
         style={{

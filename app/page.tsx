@@ -61,7 +61,7 @@ export default function Home() {
 
   router.push(`/classroom/${id}`);
 }
-  function joinClassroom() {
+  async function joinClassroom() {
   const name = studentName.trim();
   const code = classroomCode.trim().toUpperCase();
 
@@ -75,28 +75,73 @@ export default function Home() {
     return;
   }
 
+  // Get the currently logged-in user
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  const storedClassroom = localStorage.getItem(
-    `classroom-${code}`
-  );
-
-  if (!storedClassroom) {
-    alert("Classroom not found. Please check the code.");
-    router.push("/");
+  if (!user) {
+    alert("You must be logged in to join a classroom.");
+    router.push("/login");
     return;
   }
 
-    const student = {
-    id: `student-${Date.now()}`,
-    name,
-    role: "student" as const,
-    permission: "none" as const,
-  };
-  localStorage.setItem(
-    `student-${code}`,
-    JSON.stringify(student)
-  );
-  sessionStorage.setItem("currentUserId", student.id);
+  // Check that the classroom exists
+  const { data: classroom, error: classroomError } =
+    await supabase
+      .from("classrooms")
+      .select("id, name")
+      .eq("id", code)
+      .single();
+
+  if (classroomError || !classroom) {
+    console.error(
+      "Failed to find classroom:",
+      classroomError
+    );
+
+    alert("Classroom not found. Please check the code.");
+    return;
+  }
+
+  // Check whether the student is already a member
+  const { data: existingMember } = await supabase
+    .from("classroom_members")
+    .select("id")
+    .eq("classroom_id", code)
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  if (existingMember) {
+    alert("You have already joined this classroom.");
+    sessionStorage.setItem("currentUserId", user.id);
+    router.push(`/classroom/${code}`);
+    return;
+  }
+
+  // Add the student to the classroom
+  const { error: joinError } = await supabase
+    .from("classroom_members")
+    .insert({
+      classroom_id: code,
+      user_id: user.id,
+      permission: "none",
+    });
+
+  if (joinError) {
+    console.error(
+      "Failed to join classroom:",
+      joinError
+    );
+
+    alert(
+      `Failed to join classroom: ${joinError.message}`
+    );
+
+    return;
+  }
+
+  sessionStorage.setItem("currentUserId", user.id);
 
   router.push(`/classroom/${code}`);
 }
