@@ -146,6 +146,10 @@ return (
 
     <h1>{classroom.name}</h1>
 
+    <p>
+      Current-State: <strong>Active</strong>
+    </p>
+
     {currentUser && (
       <div
         style={{
