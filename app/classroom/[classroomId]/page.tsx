@@ -8,7 +8,7 @@ import { useParams } from "next/navigation";
 import { useRouter } from "next/navigation";
 
 import { Classroom, User } from "@/types/classroom";
-import type { ExcalidrawImperativeAPI, } from "@excalidraw/excalidraw/types";
+import type { ExcalidrawImperativeAPI,} from "@excalidraw/excalidraw/types";
 import { supabase } from "@/lib/supabase";
 
 
@@ -44,6 +44,12 @@ export default function ClassroomPage() {
   const clientId = useRef(
     Math.random().toString(36).substring(2, 10)
   );
+
+  const broadcastTimeout = useRef<ReturnType<typeof setTimeout> | null>(
+    null
+  );
+
+  const pendingElements = useRef<any>([]);
 
   async function toggleDrawingPermission(studentId: string) {
   if (!classroom || currentUser?.role !== "teacher") {
@@ -414,9 +420,15 @@ export default function ClassroomPage() {
     });
 
   return () => {
+    if (broadcastTimeout.current) {
+      clearTimeout(broadcastTimeout.current);
+      broadcastTimeout.current = null;
+    }
+
     whiteboardChannel.current = null;
     supabase.removeChannel(channel);
   };
+
 }, [params.classroomId]);
 
   if (!classroom) {
@@ -544,14 +556,30 @@ return (
             return;
           }
 
-          channel.send({
-            type: "broadcast",
-            event: "whiteboard-update",
-            payload: {
-              clientId: clientId.current,
-              elements,
-            },
-          });
+          // Store the latest version of the drawing.
+          pendingElements.current = elements;
+
+          // If a broadcast is already scheduled,
+          // don't create another one.
+          if (broadcastTimeout.current) {
+            return;
+          }
+
+          // Wait a short moment before sending.
+          broadcastTimeout.current = setTimeout(() => {
+            const latestElements = pendingElements.current;
+
+            channel.send({
+              type: "broadcast",
+              event: "whiteboard-update",
+              payload: {
+                clientId: clientId.current,
+                elements: latestElements,
+              },
+            });
+
+            broadcastTimeout.current = null;
+          }, 100);
         }}
       />
 
