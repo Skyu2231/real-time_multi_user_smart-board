@@ -118,6 +118,58 @@ export default function ClassroomPage() {
       return;
     }
 
+
+    const { data: memberData, error: memberError } =
+      await supabase
+        .from("classroom_members")
+        .select(`
+          user_id,
+          permission,
+          profiles (
+            id,
+            name,
+            role
+          )
+        `)
+        .eq("classroom_id", classroomId);
+
+    if (memberError) {
+      console.error(
+        "Failed to load classroom members:",
+        memberError
+      );
+
+      alert(
+        `Failed to load students: ${memberError.message}`
+      );
+
+      return;
+    }
+
+    const students: User[] = (memberData ?? [])
+  .filter((member) => {
+    const profile = Array.isArray(member.profiles)
+      ? member.profiles[0]
+      : member.profiles;
+
+    return profile?.role === "student";
+  })
+  .map((member) => {
+    const profile = Array.isArray(member.profiles)
+      ? member.profiles[0]
+      : member.profiles;
+
+    return {
+      id: member.user_id,
+      name: profile?.name ?? "Student",
+      role: "student" as const,
+      permission:
+        member.permission === "draw"
+          ? ("draw" as const)
+          : ("none" as const),
+    };
+  });
+
     const teacher: User = {
       id: teacherData.id,
       name: teacherData.name,
@@ -129,14 +181,24 @@ export default function ClassroomPage() {
       id: classroomData.id,
       name: classroomData.name,
       teacher,
-      students: [],
+      students,
     };
 
     setClassroom(classroom);
 
     if (user.id === classroomData.teacher_id) {
       setCurrentUser(teacher);
+      return;
     }
+
+    const currentStudent = students.find(
+      (student) => student.id === user.id
+    );
+
+    if (currentStudent) {
+      setCurrentUser(currentStudent);
+    }
+    
   }
 
   loadClassroom();
