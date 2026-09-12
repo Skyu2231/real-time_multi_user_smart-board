@@ -7,7 +7,7 @@
 
 "use client";
 import { Classroom } from "@/types/classroom";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
@@ -16,7 +16,29 @@ export default function Home() {
 
   const [classroomName, setClassroomName] = useState("");
   const [classroomCode, setClassroomCode] = useState("");
+  const [checkingAuth, setCheckingAuth] = useState(true);
   const [studentName, setStudentName] = useState("");
+
+  useEffect(() => {
+    async function checkAuth() {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      
+
+    // console.log("Current authenticated user:", user);
+
+
+      if (!user) {
+        router.push("/login");
+        return;
+      }
+
+      setCheckingAuth(false);
+    }
+
+    checkAuth();
+  }, [router]);
 
   async function createClassroom() {
   if (!classroomName.trim()) {
@@ -145,6 +167,21 @@ export default function Home() {
 
   router.push(`/classroom/${code}`);
 }
+  async function logout() {
+  const { error } = await supabase.auth.signOut();
+
+  if (error) {
+    console.error("Failed to log out:", error);
+    alert("Failed to log out.");
+    return;
+  }
+
+  router.push("/login");
+}
+
+  if (checkingAuth) {
+    return <p>Checking authentication...</p>;
+  }
 
   return (
     <main
@@ -165,6 +202,10 @@ export default function Home() {
         <h1>SmartBoard</h1>
 
         <p>Interactive classroom whiteboard</p>
+        
+        <button onClick={logout}>
+          Logout
+        </button>
 
         <hr />
 

@@ -6,11 +6,11 @@ import "@excalidraw/excalidraw/index.css";
 import { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import { useRouter } from "next/navigation";
+import { CaptureUpdateAction } from "@excalidraw/excalidraw";
 
 import { Classroom, User } from "@/types/classroom";
 import type { ExcalidrawImperativeAPI,} from "@excalidraw/excalidraw/types";
 import { supabase } from "@/lib/supabase";
-import { CaptureUpdateAction } from "@excalidraw/excalidraw";
 
 
 const Excalidraw = dynamic(
