@@ -50,6 +50,9 @@ export default function ClassroomPage() {
     null
   );
 
+  const saveTimeout =
+  useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const pendingElements = useRef<any>([]);
 
   const outgoingSequence = useRef(0);
@@ -57,6 +60,34 @@ export default function ClassroomPage() {
   const lastReceivedSequence = useRef(
     new Map<string, number>()
   );
+
+  const saveWhiteboard = async (elements: any) => {
+  const classroomId = params.classroomId as string;
+
+  const { error } = await supabase
+    .from("whiteboards")
+    .upsert(
+      {
+        classroom_id: classroomId,
+        data: {
+          elements,
+        },
+        updated_at: new Date().toISOString(),
+      },
+      {
+        onConflict: "classroom_id",
+      }
+    );
+
+    if (error) {
+      console.error(
+        "Failed to save whiteboard:",
+        error
+      );
+    } else {
+      console.log("Whiteboard saved");
+    }
+  };
 
   async function toggleDrawingPermission(studentId: string) {
   if (!classroom || currentUser?.role !== "teacher") {
@@ -493,6 +524,12 @@ export default function ClassroomPage() {
       broadcastTimeout.current = null;
     }
 
+    if (saveTimeout.current) {
+      clearTimeout(saveTimeout.current);
+      saveTimeout.current = null;
+    }
+
+
     whiteboardChannel.current = null;
 
     supabase.removeChannel(channel);
@@ -619,6 +656,16 @@ return (
           if (isApplyingRemoteChange.current) {
             return;
           }
+
+          if (saveTimeout.current) {
+            clearTimeout(saveTimeout.current);
+          }
+
+          saveTimeout.current = setTimeout(() => {
+            saveWhiteboard(elements);
+
+            saveTimeout.current = null;
+          }, 1000);
 
           const channel = whiteboardChannel.current;
 
