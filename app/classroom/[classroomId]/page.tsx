@@ -89,6 +89,56 @@ export default function ClassroomPage() {
     }
   };
 
+  const loadWhiteboard = async () => {
+  const classroomId = params.classroomId as string;
+
+  const { data, error } = await supabase
+    .from("whiteboards")
+    .select("data")
+    .eq("classroom_id", classroomId)
+    .maybeSingle();
+
+  if (error) {
+    console.error(
+      "Failed to load whiteboard:",
+      error
+    );
+    return;
+  }
+
+  if (!data?.data) {
+    console.log("No saved whiteboard found");
+    return;
+  }
+
+  const savedData = data.data as any;
+
+  if (!savedData.elements) {
+    console.log("Saved whiteboard has no elements");
+    return;
+  }
+
+  if (!excalidrawAPI.current) {
+    console.log(
+      "Excalidraw API is not ready yet"
+    );
+    return;
+  }
+
+  isApplyingRemoteChange.current = true;
+
+  excalidrawAPI.current.updateScene({
+    elements: savedData.elements,
+    captureUpdate: CaptureUpdateAction.NEVER,
+  });
+
+  requestAnimationFrame(() => {
+    isApplyingRemoteChange.current = false;
+  });
+
+  console.log("Whiteboard restored");
+};
+
   async function toggleDrawingPermission(studentId: string) {
   if (!classroom || currentUser?.role !== "teacher") {
     return;
@@ -646,6 +696,7 @@ return (
       <Excalidraw
         excalidrawAPI={(api) => {
           excalidrawAPI.current = api;
+          loadWhiteboard();
         }}
         viewModeEnabled={
           currentUser?.role === "student" &&
